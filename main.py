@@ -112,7 +112,6 @@ def my_expired_token_callback(jwt_header, jwt_payload):
 
 
 
-
 def block_token(token):
     token_id = uuid.uuid1()
     now_time = datetime.datetime.now()
