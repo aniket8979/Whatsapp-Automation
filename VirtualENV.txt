@@ -1,0 +1,7 @@
+pip install virtulenv
+
+virtualenv <'name of folder'>
+
+.\<'Folder name'>\Scripts\Activate
+
+deactivate
