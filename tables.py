@@ -33,6 +33,6 @@ def save_user_session(sid, phone, user_id, status):
         result = conn.execute(session)
         print('last inserted key: ', result.inserted_primary_key)
         conn.commit()
-    except:
-        print('some error with session model')
+    except Exception as e:
+        print('some error with session model', e)
 

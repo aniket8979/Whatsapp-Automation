@@ -98,17 +98,17 @@ def check_token_revoked(jwt_header, jwt_payload):
         rt = conn.execute(query)
         nrt = tuple(rt.fetchall())
         if nrt:
-            return jsonify({'status':'Token is in blocklist'}), 401
+            return jsonify({'status':'blockedToken'}), 401
 
 
 @jwt.invalid_token_loader
 def invalid_token_response(callback):
-    return jsonify({'Status':'Invalid Token'}), 401
+    return jsonify({'status':'invalidToken'}), 401
 
 
 @jwt.expired_token_loader
 def my_expired_token_callback(jwt_header, jwt_payload):
-    return jsonify({'Status':'Token Expired','Response':'Please login again'}), 401
+    return jsonify({'status':'tokenExpired','response':'loginAgain'}), 401
 
 
 
@@ -122,12 +122,12 @@ def block_token(token):
             conn.execute(query)
             conn.commit()
     except:
-        print('Blocked Token already exist in Database')
+        print('Blocked token already exist in Database')
 
 
 @app.route('/')
 @cross_origin()
-def open():
+def open1():
     return "Hello Client,   Server Says : Welcome"
 
 
@@ -149,23 +149,23 @@ def logout():
                 log_dr.start()
                 mySessions.pop(phone, None)
                 block_token(token=jti)
-                a = {'Status':'Logged out', 'Token':'Token revoked'}
+                a = {'status':'loggedOut', 'token':'tokenRevoked'}
                 return jsonify(a), 200
             except:
                 mySessions.pop(phone, None)
                 block_token(token=jti)
-                a = {'Status':'Logged out', 'Token':'Token revoked'}
+                a = {'status':'loggedOut', 'token':'tokenRevoked'}
                 return jsonify(a), 200
                 # return redirect(url_for('index'))
         else:
             mySessions.pop(phone, None)
             block_token(token=jti)
-            a = {'Status':'Logged out', 'Token':'Token revoked'}
+            a = {'status':'loggedOut', 'token':'tokenRevoked'}
             return jsonify(a), 200
             # return redirect(url_for('index'))
     else:
         block_token(token=jti)
-        a = {'Status':'Logged out', 'Token':'Token revoked'}
+        a = {'status':'loggedOut', 'token':'tokenRevoked'}
         return jsonify(a), 200
     
 
@@ -181,12 +181,12 @@ def resetall():
     try:
         shutil.rmtree(users, ignore_errors=True)
         print(f"Folder '{users}' deleted successfully.")
-        a = {'Status':'All User Sessions Deleted'}
+        a = {'status':'all_User_Sessions_Deleted'}
         return jsonify(a), 200
             # return redirect(url_for('dash'))
     except Exception as e:
         print(f"Error: {e}")
-        a = {'Status':'Some Error Occured'}
+        a = {'status':'some_Error_Occured'}
         return jsonify(a), 418
 
 
@@ -246,10 +246,10 @@ def myqr():
             if data is not None:
                 return jsonify({"qrdata":data})
             else:
-                a = {'Error':'Did not received Respose from whatsapp, Reset account and Scan Qr Again'}
+                a = {'status':'error','response':'Did not received Respose from whatsapp, Reset account and Scan Qr Again'}
                 return jsonify(a), 408
         except:
-            a = {'Error':'Did not received Respose from whatsapp, Reset account and Scan Qr Again'}
+            a = {'status':'error','response':'Did not received Respose from whatsapp, Reset account and Scan Qr Again'}
             return jsonify(a), 408
 
 
@@ -274,15 +274,15 @@ def add_account():
             driver_thread.start()
             user['number'] = phone
             token = create_access_token(identity=user['sub'], additional_claims= user)
-            a = {'Status':'Connecting with server', 'Response':'Fetch QR after few Seconds', 'token':token}
+            a = {'status':'connecting_to_server', 'response':'fetch QR after few Seconds', 'token':token}
             # return 'jai shree ram'
             return jsonify(a), 200
         except:
-                a = {"Request timeout": "Reset Account and Rescan QR Code"}
+                a = {'status':"timeout",'response': "reset Account and Rescan QR Code"}
                 return jsonify(a), 408
     else:
-        return jsonify({'error':'Invalid Request'}), 405
-
+        return jsonify({'status':'error','respnse':'invalidRequest'}), 405
+    
 
 def activate_driver(username, user_session):
     global mySessions, user_dir
@@ -292,6 +292,17 @@ def activate_driver(username, user_session):
     client = mySessions[user_session].start()
     print('User Session started')
     return client
+
+
+@app.route('/dash', methods = ['GET', 'POST'])
+@cross_origin()
+@jwt_required()
+def Dash():
+    info = get_jwt()
+    a = render(userid=info['id'])
+    return jsonify({'status':'loggedIn', 'accounts':a}), 200
+
+
 
 
 @app.route('/access', methods = ['POST'])
@@ -315,7 +326,7 @@ def user_whats():
                 update_token = create_access_token(identity=info['sub'], additional_claims=info)
                 az = user_status(phone=str(ph_number), status='active')
                 status = render(userid=info['id'])
-                a = {'Status':'Session Started', 'Token':update_token, 'Accounts':status}
+                a = {'status':'sessionStarted', 'token':update_token, 'accounts':status}
                 return jsonify(a), 200
 
             elif button in mySessions and 'number' in info:
@@ -327,7 +338,7 @@ def user_whats():
                 info['number'] = button
                 update_token = create_access_token(identity=info['sub'], additional_claims=info)
                 status = render(userid=info['id'])
-                a = {'Status':'Session Started', 'Token':update_token, 'Accounts':status}
+                a = {'status':'sessionStarted', 'token':update_token, 'accounts':status}
                 return jsonify(a), 200
             
             elif button in mySessions and 'number' not in info:
@@ -339,11 +350,11 @@ def user_whats():
                 info['number'] = button
                 update_token = create_access_token(identity=info['sub'], additional_claims=info)
                 status = render(userid=info['id'])
-                a = {'Status':'Session Started', 'Token':update_token, 'Accounts':status}
+                a = {'status':'sessionStarted', 'token':update_token, 'accounts':status}
                 return jsonify(a), 200
                 
             elif button != info['number']:
-                a = {'Error': 'Please close session :'+info['number']}
+                a = {'status':'error','response': 'please_close_session :'+info['number']}
                 return jsonify(a), 403
                 
             else:
@@ -360,7 +371,7 @@ def user_whats():
                 info['number'] = ph_number
                 status = render(userid=info['id'])
                 update_token = create_access_token(identity=info['sub'], additional_claims=info)
-                a = {'Status':'Session Started', 'Token':update_token, 'Accounts':status}
+                a = {'status':'sessionStarted', 'token':update_token, 'accounts':status}
                 return jsonify(a), 200
             
 
@@ -377,7 +388,7 @@ def user_whats():
                     info.pop('number', None)
                     user_status(phone= sess_ph, status= 'inactive')
                     status = render(userid=info['id'])
-
+                    a = {'status':'sessionClosed', 'accounts':status, 'token':update_token}
                     return jsonify(a), 200
                 except:
                     user_status(phone= sess_ph, status= 'inactive')
@@ -385,14 +396,14 @@ def user_whats():
                     info.pop('number', None)
                     status = render(userid=info['id'])
                     update_token = create_access_token(identity=info['sub'], additional_claims=info)
-                    a = {'Status':'Session Closed', 'Accounts':status, 'Token':update_token}
+                    a = {'status':'SessionClosed', 'accounts':status, 'token':update_token}
                     return jsonify(a), 200
             else:
                 user_status(phone= sess_ph, status= 'inactive')             
                 info.pop('number', None)
                 status = render(userid=info['id'])
                 update_token = create_access_token(identity=info['sub'], additional_claims=info)
-                a = {'Status':'Session Closed', 'Accounts':status, 'Token':update_token}
+                a = {'status':'Session Closed', 'accounts':status, 'token':update_token}
                 return jsonify(a), 200
             
         elif button[0:5] =='reset':
@@ -408,24 +419,24 @@ def user_whats():
                         delete_account(userid=info['token'], phone=sess_reset)
                         del_db_data(phone=button[5:15])
                         status = render(userid=info['id'])
-                        a = {'Status':'Session Deleted', 'Accounts':status}
+                        a = {'status':'sessionDeleted', 'accounts':status}
                         return jsonify(a), 200
                     else:
                         delete_account(userid= info['token'], phone=sess_reset)
                         del_db_data(phone=sess_reset)
                         status = render(userid=info['id'])
-                        a = {'Status':'Session Deleted', 'Accounts':status}
+                        a = {'status':'sessionDeleted', 'accounts':status}
                         return jsonify(a), 200
 
             except:
                     delete_account(userid= info['token'], phone=sess_reset)
                     del_db_data(phone=sess_reset)
                     status = render(userid=info['id'])
-                    a = {'Status':'Session Deleted', 'Accounts':status}
+                    a = {'status':'sessionDeleted', 'accounts':status}
                     return jsonify(a), 200
                    
     else:
-        return jsonify({'error':'invalid request method'}), 405
+        return jsonify({'status':'error','response':'invalid request method'}), 405
 
 
 
@@ -443,13 +454,13 @@ def register():
             print('this isnt working')
             create_profile(profile=token)
             print('yes this')
-            a = {'Response': 'Registration Successful'}
+            a = {'status':'success','response': 'registrationSuccessful'}
             return jsonify(a), 200
         except:
-            a = {'Response': 'User Already Exist'}
+            a = {'status':'error','response': 'User Already Exist'}
             return jsonify(a) ,403
     else:
-        return jsonify({'error':'invalid request method'}), 405
+        return jsonify({'status':'error','response':'invalid request method'}), 405
 
 
 def render(userid):
@@ -497,20 +508,20 @@ def User_login():
                     token_Data = { 'id':str(us_log[0][0]), 'token':str(us_log[0][3])} 
                     print(token_Data)
                     token = create_access_token(identity=us_log[0][0], additional_claims=token_Data)
-                    a = { 'Login':'Successful', 'Token':token, 'Accounts':status}
+                    a = { 'login':'successful', 'token':token, 'accounts':status}
                     return jsonify(a), 200
 
                 else:
-                    a = {'Login': 'Failed', 'reason':'Incorrect Password'}
+                    a = {'login': 'failed', 'response':'incorrectPassword'}
                     # return jsonify(a), 403
             else:
-                f = 'Failed'
-                r ='Incorrect EmailID'
-                a = {'Login': f, 'reason':r}
+                f = 'failed'
+                r ='incorrectEmailID'
+                a = {'login': f, 'response':r}
                 return jsonify(a), 401
  
     else:
-        a = {'err':'Incorrect request method'}
+        a = {'status':'err','response':'Incorrect request method'}
         return jsonify(a) ,405
     
 
@@ -524,7 +535,7 @@ def send_OTP_mail(mail, otp):
         return f"OTP Sent on {mail}"
     except Exception as e:
         print(e)
-        return jsonify({"Response":"Failed to send OTP on {mail}"}), 401
+        return jsonify({'status':'error',"response":"Failed to send OTP on {mail}"}), 401
     
 
     
@@ -545,10 +556,10 @@ def account_exist():
                 mail =  send_OTP_mail(mail=con_email, otp=gen_otp)
                 forgetPassDict[str(con_email)] = str(gen_otp)
                 token = create_access_token(identity = con_email)
-                a = {'Status': mail, 'Response':'verify OTP request is Allowed', 'Token':token}
+                a = {'status': mail, 'response':'verify OTP request is Allowed', 'token':token}
                 return jsonify(a), 200
         except:
-            a = {'Response':'User Does not exist'}
+            a = {'response':'User Does not exist'}
             return jsonify(a), 200
 
 
@@ -565,11 +576,11 @@ def forget_pass():
     if sent_otp==otp:
             user['secure'] = '!@#$%'
             token = create_access_token(identity=user['sub'], additional_claims=user)
-            a = {'Status': 'OTP Varified','Response':'resetpass request is Allowed', 'Token':token}
+            a = {'status': 'optVarified','response':'resetpass request is Allowed', 'token':token}
             forgetPassDict.pop(email)
             return jsonify(a), 200
     else:
-        a = {'Response': 'Invalid OTP'}
+        a = {'response': 'invalidOTP'}
         return jsonify(a), 403
     
 
@@ -595,16 +606,16 @@ def reset_Account():
                     conn.commit()
                     jti = get_jwt()['jti']
                     block_token(token=jti)
-                    a = {'Status':'Password Changed Successfully', 'Token':'Token Revoked, Please Log in Again'}                    
+                    a = {'status':'success', 'response':'Password Changed Successfully'}                    
                     return jsonify(a), 200
             else:
-                a = {'Response': 'Password did not matched'}
+                a = {'status':'success','response': 'Password did not matched'}
                 return jsonify(a), 403    
         else:
-            a = {'Response':'Incorret request method'}
+            a = {'status':'success','response':'Incorret request method'}
             return jsonify(a), 405
     else:
-        a = {'Status':'Session Token Invalid'}
+        a = {'status':'success','response':'Session token Invalid'}
         return jsonify(a), 401
 
         
@@ -636,26 +647,27 @@ def send_msg():
     print(user)
     global mySessions
     if 'number' in user:
-        number = user['number']
+        number = user['number'] 
         if number in mySessions:
             try:
                 client = mySessions[number].start()
-                phone =  str(request.json.get("phone")).strip()
+                phone =  str(request.json.get("phone"))
                 phone_len = len(phone)
                 phone = phone[phone_len - 10:]
                 text = str(request.json.get("text"))
 
                 client.sendText("+91"+phone, text)
-                a = {'Status':'Message sent Successfully'}
+                a = {'status':'success','response':'Message sent Successfully'}
                 return jsonify(a), 200
-            except:
-                a = {'Status':'Message not Sent'}
+            except Exception as e:
+                print("The Exception",e)
+                a = {'status':'error','response':'Message not Sent'}
                 return jsonify(a), 200
         else:
-            a = {'Status':'User Session Inactive'}
+            a = {'status':'error','response':'User Session Inactive'}
             return jsonify(a), 403
     else:
-        a = {'Status':'Session Token Invalid'}
+        a = {'status':'error','response':'Session token Invalid'}
         return jsonify(a), 401
     
 
@@ -711,20 +723,20 @@ def send_image():
                     
                     delete_file(filepath= file_path)
                     delete_file(filepath=imagepath)
-                    a = {'Status':'Image sent Successfully'}
+                    a = {'status':'success','response':'Image sent Successfully'}
                     return jsonify(a), 200
                 
                 else:
-                    a = {'Status': 'Incorrect request method'}
+                    a = {'status':'error','response': 'Incorrect request method'}
                     return jsonify(a), 405
             except:
-                a = {'Status':'some error occoured, Please restart session'}
+                a = {'status':'error','response':'some error occoured, Please restart session'}
                 return jsonify(a), 404
         else:
-            a = {'Status':'User Session Inactive'}
+            a = {'status':'error','response':'User Session Inactive'}
             return jsonify(a), 403
     else:
-        a = {'Status':'Session token Invalid'}
+        a = {'status':'error','response':'Session token Invalid'}
         return jsonify(a), 403
 
     
@@ -792,22 +804,22 @@ def use_file():
                             count = count +1
                     
                     delete_file(filepath= file_path)
-                    a = {'Status': 'Msg sent to Contacts'}
+                    a = {'status':'success','response': 'Msg sent to Contacts'}
                     return jsonify(a), 200
                 
                 else:
                     # delete_file(filepath= file_path)
-                    a = {'Status':'Incorrect Form method'}
+                    a = {'status':'error','response':'Incorrect Form method'}
                     return jsonify(a), 405
                 
             except:
-                a = {'Status':'some error occoured, Please restart session !!'}
+                a = {'status':'error','response':'some error occoured, Please restart session !!'}
                 return jsonify(a), 404
         else:
-            a = {'Status':'User Session Inactive'}
+            a = {'status':'error','response':'User Session Inactive'}
             return jsonify(a), 403
     else:
-        a = {'Status':'Session Token Invalid'}
+        a = {'status':'error','response':'Session token Invalid'}
         return jsonify(a), 403
 
 
@@ -839,7 +851,7 @@ def unread():
             try:
                 data = client.getAllUnreadMessages()
             except:
-                return jsonify({"Status":'Session is loading, Please reload.'})
+                return jsonify({'status':'success',"response":'Session is loading, Please reload.'})
             for i in data:
                 recFrom = str(i['from'])
                 recMsg = str(i['body'])
@@ -850,19 +862,20 @@ def unread():
                 else:
                     continue
             clean_txt_file(file_path=path+'\\'+'incoming.txt')
-            with open (path+'\\'+'incoming.txt', 'w') as file:
+            print(sender)
+            with open(path+'\\'+'incoming.txt', 'w') as file:
                 for number in sender:  
                     file.write(str(number))
                     file.write('\n')
             chat = len(sender)
             rec_from = list(sender)
-            a = {'Status':str(chat)+' new msgs', 'senders':rec_from}
+            a = {'status':'success','response':str(chat)+' new msgs', 'senders':rec_from}
             return jsonify(a), 200
         else:
-            a = {'Status':'User Session Inactive'}
+            a = {'status':'error','response':'User Session Inactive'}
             return jsonify(a), 403
     else:
-        a = {'Status':'Session Token Invalid'}
+        a = {'status':'error','response':'Session token Invalid'}
         return jsonify(a), 403
 
     
@@ -883,7 +896,7 @@ def reply():
                     for line in file:
                         senders.append(str(line.strip()))
             except:
-                return jsonify({'Status':'Some Error Occured'}), 404
+                return jsonify({'status':'error','response':'Some Error Occured'}), 404
 
             text = str(request.values['reply_msg'])
             reply_fail = 0
@@ -901,9 +914,9 @@ def reply():
                     print('Unable to reply to this User')
                     reply_fail = reply_fail + 1
                     count = count+1
-            a = {
-                'Status':{
-                    'Status':'Task Completed',
+            a = {'status':'success',
+                'response':{
+                    'status':'Task Completed',
                     'Successful':f"{reply_done}",
                     'Failed':f"{reply_fail}"
                     }
@@ -911,10 +924,10 @@ def reply():
             clean_txt_file(file_path=str(path+'\\'+'incoming.txt'))
             return jsonify(a), 200
         else:
-            a = {'status':'User Session Inactive'}
+            a = {'status':'error','response':'User Session Inactive'}
             return jsonify(a), 403
     else:
-        a = {'Status':'Session Token Invalid'}
+        a = {'status':'error','response':'Session token Invalid'}
         return jsonify(a), 403
 
 
