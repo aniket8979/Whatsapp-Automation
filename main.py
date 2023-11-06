@@ -48,9 +48,25 @@ def clear_db_token():
     except:
         print('Database clean nothing to commit')
 
+def testStatus():
+    global mySessions
+    for user in mySessions:
+        mySessions[user].start()
+        data = mySessions[user].getQrcode()
+        if data['state'] == 'QRCODE':
+            mySessions[user].close()
+            print("Invalid Session Closed: ", user)
+        else:
+            continue   
+
+
+
 scheduler = BackgroundScheduler(daemon = True)
 scheduler.add_job(func=clear_db_token, trigger="interval", minutes = 60)
+scheduler.add_job(func=testStatus, trigger="interval", minutes = 30)
 scheduler.start()
+
+
 
 
 # Flask App Initiated
@@ -129,6 +145,9 @@ def block_token(token):
 @cross_origin()
 def open1():
     return "Hello Client,   Server Says : Welcome"
+
+
+
 
 
 @app.route('/logout')
@@ -213,7 +232,7 @@ def delete_account(userid, phone):
 
 
 def del_db_data(phone):
-    query = text(f"DELETE FROM users.user_session WHERE phone = {phone};")
+    query = text(f"DELETE FROM users.user_session WHERE phone = {str(phone)};")
     print(query)
     with engine.connect() as conn:
         conn.execute(query)
@@ -244,6 +263,7 @@ def myqr():
             mySessions[number].start()
             data = mySessions[number].getQrcode()
             if data is not None:
+                print(data["state"])
                 return jsonify({"qrdata":data})
             else:
                 a = {'status':'error','response':'Did not received Respose from whatsapp, Reset account and Scan Qr Again'}
@@ -259,16 +279,17 @@ def myqr():
 @jwt_required()
 def add_account():
     global mySessions
+    print(recentlyAdded)
     if request.method == 'GET':
         phone = str(request.values["phone"])
-
         user = get_jwt()
-
         try:
-            save_user_session(sid=0, phone= phone, user_id= user['id'], status= 'inactive')
+            # save_user_session(sid=0, phone= phone, user_id= user['id'], status= 'inactive')
             def driver_act():
                 a = activate_driver(username= user['token'], user_session=phone)
+                save_user_session(sid=0, phone= phone, user_id= user['id'], status= 'inactive')
                 user_status(phone=phone, status='inactive')
+                # recentlyAdded.append({"number":phone, "account":user['token']})
                 a.close()
             driver_thread = threading.Thread(target=driver_act)
             driver_thread.start()
@@ -282,7 +303,7 @@ def add_account():
                 return jsonify(a), 408
     else:
         return jsonify({'status':'error','respnse':'invalidRequest'}), 405
-    
+
 
 def activate_driver(username, user_session):
     global mySessions, user_dir
@@ -292,6 +313,63 @@ def activate_driver(username, user_session):
     client = mySessions[user_session].start()
     print('User Session started')
     return client
+
+
+def ttt():
+    your_session_name = "test_new"
+    creator = Create(session=your_session_name)
+    newClient = creator.start()
+    abc = newClient.isConnected()
+    print("Hello",abc)
+
+# ttt()
+
+def check():
+    your_session_name = "test_new"
+    client = Create(session=your_session_name)
+    ab = client.start()
+    qr = client.getQrcode()
+    if qr:
+        print("QR code receiced")
+        print(qr.get("state"))
+
+    
+    # bc = client.statusFind_dict
+    # de = ab.isAuthenticated()
+    # ef = ab.getConnectionState
+    # gh = ab.isConnected
+    # bb = client.statusFind(status=)
+
+    # print("status create",qr , "find status dict")
+    # a = str("is connected",gh, "find status", bc, "isAuthenticated",de, "getConnectionState:", ef)
+    # print(a)
+
+
+
+
+
+@app.route('/checkstate' , methods = ['GET', 'POST'])
+def CheckStatus():
+    user = get_jwt()
+    print(user)
+    global mySessions
+    if 'number' in user:
+        number = user['number'] 
+        if number in mySessions:
+                client = mySessions[number].start()
+                data = client
+                phone =  str(request.json.get("phone"))
+                phone_len = len(phone)
+                phone = phone[phone_len - 10:]
+                text = str(request.json.get("text"))
+
+                client.sendText("+91"+phone, text)
+                a = {'status':'success','response':'Message sent Successfully'}
+                return jsonify(a), 200
+
+
+
+
 
 
 @app.route('/dash', methods = ['GET', 'POST'])
@@ -417,13 +495,20 @@ def user_whats():
                     if sess_reset in mySessions:
                         mySessions.pop(sess_reset, None)
                         delete_account(userid=info['token'], phone=sess_reset)
-                        del_db_data(phone=button[5:15])
+                        try:
+                            del_db_data(phone=button[5:15])
+                        except Exception as e:
+                            print("Error at reset ", e)
                         status = render(userid=info['id'])
                         a = {'status':'sessionDeleted', 'accounts':status}
                         return jsonify(a), 200
                     else:
                         delete_account(userid= info['token'], phone=sess_reset)
-                        del_db_data(phone=sess_reset)
+        
+                        try:
+                            del_db_data(phone=button[5:15])
+                        except Exception as e:
+                            print("Error at reset ", e)
                         status = render(userid=info['id'])
                         a = {'status':'sessionDeleted', 'accounts':status}
                         return jsonify(a), 200
@@ -935,7 +1020,5 @@ def reply():
 
 if __name__ == '__main__':  
     serve(app, host="0.0.0.0", port=5000)
-
-    
 
     
