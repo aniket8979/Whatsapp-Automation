@@ -51,11 +51,20 @@ def clear_db_token():
 def testStatus():
     global mySessions
     for user in mySessions:
-        mySessions[user].start()
-        data = mySessions[user].getQrcode()
-        if data['state'] == 'QRCODE':
-            mySessions[user].close()
-            print("Invalid Session Closed: ", user)
+        
+        data =  mySessions[user].start()
+        print("This is data",data)
+        if data['state'] != 'CONNECTED' and data['status'] != 'inChat':
+            try:
+                def logout_dri():
+                        client = mySessions[user].start()
+                        client.close()
+                log_dr = threading.Thread(target=logout_dri)
+                log_dr.start()
+                mySessions.pop(user)
+                print("Invalid Session Closed: ", user)
+            except Exception as e:
+                print("Exception: " ,e)
         else:
             continue   
 
@@ -63,7 +72,7 @@ def testStatus():
 
 scheduler = BackgroundScheduler(daemon = True)
 scheduler.add_job(func=clear_db_token, trigger="interval", minutes = 60)
-scheduler.add_job(func=testStatus, trigger="interval", minutes = 30)
+scheduler.add_job(func=testStatus, trigger="interval", minutes = 1)
 scheduler.start()
 
 
@@ -279,7 +288,6 @@ def myqr():
 @jwt_required()
 def add_account():
     global mySessions
-    print(recentlyAdded)
     if request.method == 'GET':
         phone = str(request.values["phone"])
         user = get_jwt()
