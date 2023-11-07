@@ -18,17 +18,17 @@ import threading
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, get_jwt
 from apscheduler.schedulers.background import BackgroundScheduler
 
+
 from flask_cors import CORS, cross_origin
 from waitress import serve
-
-
-
 
 
 # MY SQL DATABASE LIBRARY & models
 from tables import user_new, save_user_session
 from models import engine
 from sqlalchemy.sql import text
+
+
 
 
 #Scheduler to Autodelete Revoked Tokens from database
@@ -47,6 +47,8 @@ def clear_db_token():
                 conn.commit()
     except:
         print('Database clean nothing to commit')
+
+
 
 
 
@@ -74,6 +76,7 @@ def testStatus():
             continue
 
 
+
 scheduler = BackgroundScheduler(daemon = True)
 scheduler.add_job(func=clear_db_token, trigger="interval", minutes = 60)
 scheduler.add_job(func=testStatus, trigger="interval", minutes = 20)
@@ -84,6 +87,9 @@ scheduler.start()
 
 # Flask App Initiated
 app = Flask(__name__)
+
+
+
 
 
 CORS(app,
@@ -101,12 +107,15 @@ CORS(app,
 
 
 
+
 # Setup the Flask-JWT-Extended extension
 app.config["JWT_SECRET_KEY"] = "nnnnnnnnSCRIZAnnnnnnnnnPVTnnnnnnnLTD"  # Change this!
 access_expires = timedelta(hours=12)
 # app.config['JWT_BLACKLIST_ENABLED'] = True
 # app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = access_expires
+
+
 
 
 jwt = JWTManager(app)
@@ -116,6 +125,7 @@ mySessions = dict()
 forgetPassDict = {}
 
 user_dir = ('E:\\WhatSZ\\WhatAppApi\\saved_users')
+
 
 
 
@@ -152,6 +162,8 @@ def block_token(token):
             conn.commit()
     except:
         print('Blocked token already exist in Database')
+
+
 
 
 @app.route('/')
@@ -200,6 +212,8 @@ def logout():
         a = {'status':'loggedOut', 'token':'tokenRevoked'}
         return jsonify(a), 200
     
+
+
 
 
 @app.route('/resetall')
@@ -326,35 +340,6 @@ def activate_driver(username, user_session):
     print('User Session started')
     return client
 
-
-def ttt():
-    your_session_name = "test_new"
-    creator = Create(session=your_session_name)
-    newClient = creator.start()
-    abc = newClient.isConnected()
-    print("Hello",abc)
-
-# ttt()
-
-def check():
-    your_session_name = "test_new"
-    client = Create(session=your_session_name)
-    ab = client.start()
-    qr = client.getQrcode()
-    if qr:
-        print("QR code receiced")
-        print(qr.get("state"))
-
-    
-    # bc = client.statusFind_dict
-    # de = ab.isAuthenticated()
-    # ef = ab.getConnectionState
-    # gh = ab.isConnected
-    # bb = client.statusFind(status=)
-
-    # print("status create",qr , "find status dict")
-    # a = str("is connected",gh, "find status", bc, "isAuthenticated",de, "getConnectionState:", ef)
-    # print(a)
 
 
 
@@ -977,6 +962,7 @@ def unread():
 
     
 
+
 @app.route('/reply', methods = ['GET','POST'])
 @cross_origin()
 @jwt_required()
@@ -1032,5 +1018,3 @@ def reply():
 
 if __name__ == '__main__':  
     serve(app, host="0.0.0.0", port=5000)
-
-    
