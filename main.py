@@ -22,7 +22,7 @@ from flask_cors import CORS, cross_origin
 from waitress import serve
 
 
-  
+
 
 
 # MY SQL DATABASE LIBRARY & models
@@ -48,31 +48,35 @@ def clear_db_token():
     except:
         print('Database clean nothing to commit')
 
+
+
 def testStatus():
     global mySessions
-    for user in mySessions:
-        
-        data =  mySessions[user].start()
+    for user in list(mySessions):
+        mySessions[user].start()
+        data = mySessions[user].getQrcode()
         print("This is data",data)
         if data['state'] != 'CONNECTED' and data['status'] != 'inChat':
             try:
                 def logout_dri():
-                        client = mySessions[user].start()
-                        client.close()
+                    client = mySessions[user].start()
+                    client.close()
+                    mySessions.pop(user)
                 log_dr = threading.Thread(target=logout_dri)
                 log_dr.start()
                 mySessions.pop(user)
+                sleep(0.30)
                 print("Invalid Session Closed: ", user)
             except Exception as e:
                 print("Exception: " ,e)
+                continue
         else:
-            continue   
-
+            continue
 
 
 scheduler = BackgroundScheduler(daemon = True)
 scheduler.add_job(func=clear_db_token, trigger="interval", minutes = 60)
-scheduler.add_job(func=testStatus, trigger="interval", minutes = 1)
+scheduler.add_job(func=testStatus, trigger="interval", minutes = 20)
 scheduler.start()
 
 
