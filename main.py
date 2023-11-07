@@ -278,6 +278,10 @@ def delete_file(filepath):
         print('file not deleted')
 
 
+
+
+
+
 @app.route('/getqr')
 @cross_origin()
 @jwt_required()
