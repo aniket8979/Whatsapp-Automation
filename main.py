@@ -109,7 +109,7 @@ CORS(app,
 
 
 # Setup the Flask-JWT-Extended extension
-app.config["JWT_SECRET_KEY"] = "nnnnnnnnSCRIZAnnnnnnnnnPVTnnnnnnnLTD"  # Change this!
+app.config["JWT_SECRET_KEY"] = "myTokenSecretKeyForDummyApplication"  # Change this!
 access_expires = timedelta(hours=12)
 # app.config['JWT_BLACKLIST_ENABLED'] = True
 # app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
