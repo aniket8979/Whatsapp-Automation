@@ -3,7 +3,7 @@ from sqlalchemy.inspection import inspect
 
 meta_data = MetaData()
 
-db_connection = "mysql+pymysql://root:scriza123@localhost/users"
+db_connection = "mysql+pymysql://root:hello123@localhost/users"
 
 engine = create_engine(db_connection)
 
